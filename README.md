@@ -1,6 +1,6 @@
 
 
-##### Introduction
+#### Introduction
 It seems "JIRA are not (officially) supporting the option of creating automatic backups for their cloud instance"
 We need to automate the Jira backup process and add some value by using existing AWS features to make it efficient and reliable.
 
