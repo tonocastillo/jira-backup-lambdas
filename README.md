@@ -60,5 +60,7 @@ Some resources were hardcoded in the template since having this solution in one 
 ### Resources:
 
 The original idea for this backup came from:
+
 https://github.com/datreeio/jira-backup-py
+
 Thank you.
