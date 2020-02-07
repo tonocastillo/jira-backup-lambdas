@@ -172,7 +172,7 @@ Resources:
       Type: CNAME
       TTL: 30
       ResourceRecords: 
-        - <INSERT_S3_BUCKET_HERE>.s3-website-us-east-1.amazonaws.com
+        - <INSERT_S3_BUCKET_HERE>.s3-website-<AWS_REGION>.amazonaws.com
 
   JiraPublicDNSRecord:
     Type: AWS::Route53::RecordSet
@@ -182,7 +182,7 @@ Resources:
       Type: CNAME
       TTL: 30
       ResourceRecords:
-        - <INSERT_S3_BUCKET_HERE>.s3-website-us-east-1.amazonaws.com
+        - <INSERT_S3_BUCKET_HERE>.s3-website-<AWS_REGION>.amazonaws.com
 
 ############# ALARMS for Lambda  #############
 
@@ -294,7 +294,7 @@ Resources:
           from boto.s3.key import Key
           from time import gmtime, strftime
           sqs = boto3.client('sqs')
-          sqs_url = 'https://sqs.us-east-1.amazonaws.com/<ACCOUNT_ID>/jira-backup'
+          sqs_url = 'https://sqs.<AWS_REGION>.amazonaws.com/<ACCOUNT_ID>/jira-backup'
           class Jira:
               def __init__(self, config):
                   self.config = config
@@ -375,7 +375,7 @@ Resources:
           from requests.auth import HTTPBasicAuth
           timestr = time.strftime("%Y%m%d-%H%M%S")
           sqs = boto3.client('sqs')
-          sqs_url = 'https://sqs.us-east-1.amazonaws.com/<ACCOUNT_ID>/jira-backup'
+          sqs_url = 'https://sqs.<AWS_REGION>.amazonaws.com/<ACCOUNT_ID>/jira-backup'
           s3 = boto3.client('s3')
           def rcv_msg(sqs_url):    
               response = sqs.receive_message(QueueUrl=sqs_url)
