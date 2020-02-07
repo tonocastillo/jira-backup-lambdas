@@ -4,12 +4,11 @@
 It seems "JIRA are not (officially) supporting the option of creating automatic backups for their cloud instance".
 We need to automate the Jira backup process and add some value by using existing AWS features to make it efficient and reliable.
 
-#### What we want?
-We want a complete solution that we could deploy in the current AWS production account using Cloudformation.
+A complete solution was designed in Cloudformation that could be deployed in the current AWS production account.
 
 This solution involved the utilization of AWS features such as Lambda, SQS, Cloudwatch, IAM, Route53 and S3.
 
-We wanted a solution that we could deploy once, keep it free of manual intervention, monitored all the time and we wanted the logging to take care of itself with a 7 days retention period.
+It is a solution meant to be deployed once, keep it free of manual intervention and monitored all the time.
 
 #### The problem
 The backup file size was big enough (~3.2GB) and the backup process was taking close to 15 minutes to complete.
@@ -24,8 +23,6 @@ From the documentation:
 "Amazon Simple Queue Service (SQS) is a fully managed message queuing service that enables you to decouple and scale microservices, distributed systems, and serverless applications."
 
 With help of AWS SQS we can split the Jira backup stage from the file streaming process to S3.
-
-We did it using 2 lambda functions: "JiraBackupInitiate" and "JiraBackupDownload"
 
 We also created a couple of DNS records in Route53 (public and private in our case) using the bucket name to redirect to Jira (It is not necessary). 
 
