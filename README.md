@@ -53,6 +53,11 @@ These are the ones:
               "UPLOAD_TO_S3": {
                   "S3_BUCKET": "<INSERT_S3_BUCKET_HERE>"
 ```
+
+**Important**:
+
+You need to create a Layer in Lambda for the 'requests' python3 module.
+
 Once replaced, go to Cloudformation in the AWS console and create a stack with this template.
 
 Some resources were hardcoded in the template since having this solution in one region is enough but you can add some parameters to the template and make changes when creating a new stack in Cloudformation.
