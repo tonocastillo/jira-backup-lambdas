@@ -192,9 +192,9 @@ Resources:
       AlarmName: !Join ["", [!Ref JiraBackupInitiate, "-", "Errors" ]]
       AlarmDescription: "JiraBackupInitiate Lambda Errors Alarm"
       AlarmActions:
-        - !ImportValue <SNS_TOPIC_ARN>
+        - <SNS_TOPIC_ARN>
       OKActions:
-        - !ImportValue <SNS_TOPIC_ARN>
+        - <SNS_TOPIC_ARN>
       Namespace: "AWS/Lambda"
       MetricName: "Errors"
       Dimensions:
@@ -213,9 +213,9 @@ Resources:
       AlarmName: !Join ["", [!Ref JiraBackupDownload, "-", "Errors" ]]
       AlarmDescription: "JiraBackupDownload Lambda Errors Alarm"
       AlarmActions:
-        - !ImportValue <SNS_TOPIC_ARN>
+        - <SNS_TOPIC_ARN>
       OKActions:
-        - !ImportValue <SNS_TOPIC_ARN>
+        - <SNS_TOPIC_ARN>
       Namespace: "AWS/Lambda"
       MetricName: "Errors"
       Dimensions:
@@ -234,9 +234,9 @@ Resources:
       AlarmName: !Join ["", [!Ref JiraBackupInitiate, "-", "Invocations" ]]
       AlarmDescription: "JiraBackupInitiate Lambda Invocations Alarm"
       AlarmActions:
-        - !ImportValue <SNS_TOPIC_ARN>
+        - <SNS_TOPIC_ARN>
       OKActions:
-        - !ImportValue <SNS_TOPIC_ARN>
+        - <SNS_TOPIC_ARN>
       Namespace: "AWS/Lambda"
       MetricName: "Invocations"
       Dimensions:
@@ -255,9 +255,9 @@ Resources:
       AlarmName: !Join ["", [!Ref JiraBackupDownload, "-", "Invocations" ]]
       AlarmDescription: "JiraBackupDownload Lambda Invocations Alarm"
       AlarmActions:
-        - !ImportValue <SNS_TOPIC_ARN>
+        - <SNS_TOPIC_ARN>
       OKActions:
-        - !ImportValue <SNS_TOPIC_ARN>
+        - <SNS_TOPIC_ARN>
       Namespace: "AWS/Lambda"
       MetricName: "Invocations"
       Dimensions:
@@ -285,8 +285,7 @@ Resources:
         Mode: Active
       Timeout: 900
       Layers: 
-        - Fn::ImportValue: LambdaLayers-RequestsLayer
-        - Fn::ImportValue: LambdaLayers-BotoLayer
+        - <LambdaLayer-RequestsLayer_ARN>
       Code:
         ZipFile: !Sub | 
           import json,time,os,requests,boto,boto3
@@ -367,8 +366,7 @@ Resources:
         Mode: Active
       Timeout: 900
       Layers:
-        - Fn::ImportValue: LambdaLayers-RequestsLayer
-        - Fn::ImportValue: LambdaLayers-BotoLayer
+        - <LambdaLayer-RequestsLayer_ARN>
       Code:
         ZipFile: !Sub |
           import boto3,requests,time
