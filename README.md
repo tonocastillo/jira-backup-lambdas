@@ -1,6 +1,3 @@
-The original idea for this backup came from here:
-https://github.com/datreeio/jira-backup-py
-
 The need
 
 We needed to automate the Jira backup process and add some value by using existing AWS features to make it efficient and reliable.
