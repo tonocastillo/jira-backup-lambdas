@@ -14,7 +14,7 @@ The backup file size was big enough (~3.2GB) and the backup process was taking c
 AWS Lambda has a 15 minutes execution threshold, for this reason the stream of the backup to a S3 bucket was failing.
 
 #### How to fix it?
-Use AWS SQS
+Use AWS SQS.
 From the documentation:
 "Amazon Simple Queue Service (SQS) is a fully managed message queuing service that enables you to decouple and scale microservices, distributed systems, and serverless applications."
 
