@@ -49,7 +49,8 @@ Once replaced, go to Cloudformation in the AWS console and create a stack with t
 Some resources were hardcoded in the template since having this solution in one region is enough but you can add some parameters to the template and make changes when creating a new stack in Cloudformation.
 
 
-Resources:
-The original idea for this backup came from here:
+### Resources:
+
+The original idea for this backup came from:
 https://github.com/datreeio/jira-backup-py
 Thank you.
