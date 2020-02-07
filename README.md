@@ -45,6 +45,7 @@ These are the ones:
 <SNS_TOPIC_ARN>
 <ACCOUNT_ID>
 <AWS_REGION>
+<LambdaLayer-RequestsLayer_ARN>
               "JIRA_HOST": "<ACCOUNT>.atlassian.net",
               "JIRA_EMAIL": "<ACCOUNT_EMAIL",
               "API_TOKEN": "<INSERT_YOUR_API_TOKEN_HERE",
