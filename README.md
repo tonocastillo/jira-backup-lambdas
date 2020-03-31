@@ -42,8 +42,8 @@ These are the ones:
 
 Within the jira-backup.yml template:
 
-- ***BUCKET_NAME
-- Modify the AlarmActions within the Alarms blocks: ***YOUR-SNS-TOPIC-HERE
+- ***BUCKET_NAME***
+- Modify the AlarmActions within the Alarms blocks: ***YOUR-SNS-TOPIC-HERE***
 - Inside the JiraBackupInitiate block:
 ```
           config = {
