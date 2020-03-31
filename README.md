@@ -34,13 +34,17 @@ Cloudformation templates:
 
 https://github.com/tonocastillo/jira-backup-lambdas
 
-You need to replace some entries within the the Cloudformation templates according to what you have/want in your environment.
+*It is up to you to modify the template and include Parameters to avoid modifying the template this way and just enter these values when you create the stack in Cloudformation.
+
+Being said that, you need to replace some entries within the the Cloudformation templates according to what you have/want in your environment. The parameters and within *greater than* and *less than* signs and you need to remove them too.
 
 These are the ones:
 
-Within the jira-backup.yml template
+Within the jira-backup.yml template:
 
-- JiraBackupInitiate:
+- ***BUCKET_NAME
+- Modify the AlarmActions within the Alarms blocks: ***YOUR-SNS-TOPIC-HERE
+- Inside the JiraBackupInitiate block:
 ```
           config = {
               "JIRA_HOST": "<ACCOUNT>.atlassian.net",
@@ -49,7 +53,7 @@ Within the jira-backup.yml template
               "INCLUDE_ATTACHMENTS": "true"
           }
 ```
-- JiraBackupDownload
+- Inside the JiraBackupDownload block:
 ```
           config = {
               "JIRA_HOST": "<ACCOUNT>.atlassian.net",
@@ -60,7 +64,7 @@ Within the jira-backup.yml template
               }
           }
 ```
-You need to modify *LAYERS-BUCKET* within the lambda-layers.yml template to use the bucket you want to use for layers.
+You need to modify ***LAYERS-BUCKET*** and ***VERSION*** within the *lambda-layers.yml* template to use the bucket you want to use for layers.
   
 
 
