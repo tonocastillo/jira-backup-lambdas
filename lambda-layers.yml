@@ -1,0 +1,29 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: "Template to create Lambda Layers, ARN is exported so they can be used by other templates"
+
+
+Resources:
+
+
+  RequestsLayer:
+    Type: "AWS::Lambda::LayerVersion"
+    Properties:
+      CompatibleRuntimes:
+        - python3.6
+        - python3.7
+      Content:
+        S3Bucket: "<LAYERS-BUCKET>"
+        S3Key: "requests.zip"
+      Description: requests-<VERSION>
+      LayerName: requests
+
+Outputs: 
+
+  RequestsLayerArn:
+    Description: "Resource ARN for the requests layer in us-east-1"
+    Value:
+      Ref: RequestsLayer
+    Export:
+        Name: RequestsLayer

@@ -1,0 +1,401 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: "Template to create the Jira backup lambda function"
+
+
+Resources:
+############# RULE LAMBDA 1 #############
+  JiraScheduledRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Jira-Backup ScheduledRule created from CloudFormation
+      ScheduleExpression: "rate(1 day)"
+      State: "ENABLED"
+      RoleArn: !GetAtt
+        - "JiraBackupRole"
+        - "Arn"
+      Targets:
+        -
+          Arn:
+            Fn::GetAtt:
+              - "JiraBackupInitiate"
+              - "Arn"
+          Id: JiraBackupInitiate_Target
+  JiraScheduledRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref JiraBackupInitiate
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt JiraScheduledRule.Arn
+  JiraBackupRole:
+    Type: AWS::IAM::Role
+    Properties:
+        RoleName:
+          "JiraBackup"
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - lambda.amazonaws.com
+                - events.amazonaws.com
+            Action: sts:AssumeRole
+        Policies:
+          -
+            PolicyName: "IAMPassRolePermissions"
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                -
+                  Effect: Allow
+                  Action:
+                    - iam:PassRole
+                    - xray:PutTraceSegments
+                    - sns:Publish
+                  Resource: "*"
+          -
+            PolicyName: "CloudFormationPermissions"
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                -
+                  Effect: Allow
+                  Action: cloudformation:*
+                  Resource: "*"
+          -
+            PolicyName: "XRayPermissions"
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                -
+                  Effect: Allow
+                  Action: 
+                    - xray:PutTraceSegments
+                    - xray:PutTraceSegments
+                    - xray:PutTelemetryRecords
+                    - xray:GetSamplingRules
+                    - xray:GetSamplingTargets
+                    - xray:GetSamplingStatisticSummaries
+                  Resource: "*"
+          -
+            PolicyName: "LambdaPermissions"
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                -
+                  Effect: Allow
+                  Action: 
+                    - logs:CreateLogGroup
+                    - lambda:InvokeFunction
+                  Resource:
+                    - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+                -
+                  Effect: Allow
+                  Action:
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource:
+                    - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*'
+          -
+            PolicyName: "S3Permissions"
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                -
+                  Effect: Allow
+                  Action:
+                  - s3:*
+                  Resource:
+                    Fn::Join:
+                      - ""
+                      -
+                        - "arn:aws:s3:::"
+                        -
+                          Ref: "JiraBucket"
+                        - "/*"
+          -
+            PolicyName: "SQSSendMessagePermissions"
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                -
+                  Effect: Allow
+                  Action:
+                    - sqs:SendMessage
+                    - sqs:ReceiveMessage
+                    - sqs:DeleteMessage
+                    - sqs:GetQueueAttributes
+                  Resource: 
+                    !GetAtt JiraBackupQueue.Arn
+          -
+            PolicyName: "CloudwatchPermissions"
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                -
+                  Effect: Allow
+                  Action: 
+                    - cloudwatch:*
+                  Resource: "*"
+
+############# BUCKET #############
+  JiraBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: <BUCKET_NAME>
+      AccessControl: BucketOwnerFullControl
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteContentAfter45Days
+            Status: 'Enabled'
+            ExpirationInDays: 45
+            Prefix: backups/
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+    DeletionPolicy: Delete
+
+############# SQS Queue #############
+
+  JiraBackupQueue: 
+    Type: AWS::SQS::Queue
+    Properties: 
+      QueueName: jira-backup
+      VisibilityTimeout: 400
+      DelaySeconds: 300
+      MessageRetentionPeriod: 360
+
+############# ALARMS for Lambda  #############
+
+  JiraBackupInitiateErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Join ["", [!Ref JiraBackupInitiate, "-", "Errors" ]]
+      AlarmDescription: "JiraBackupInitiate Lambda Errors Alarm"
+      AlarmActions:
+        - <YOUR-SNS-TOPIC-HERE>
+      OKActions:
+        - <YOUR-SNS-TOPIC-HERE>
+      Namespace: "AWS/Lambda"
+      MetricName: "Errors"
+      Dimensions:
+      - Name: "FunctionName"
+        Value: !Ref JiraBackupInitiate
+      Statistic: "Sum"
+      ComparisonOperator: "GreaterThanThreshold"
+      Threshold: 0
+      EvaluationPeriods: 1
+      Period: 86400
+      TreatMissingData: "missing"
+
+  JiraBackupDownloadErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Join ["", [!Ref JiraBackupDownload, "-", "Errors" ]]
+      AlarmDescription: "JiraBackupDownload Lambda Errors Alarm"
+      AlarmActions:
+        - <YOUR-SNS-TOPIC-HERE>
+      OKActions:
+        - <YOUR-SNS-TOPIC-HERE>
+      Namespace: "AWS/Lambda"
+      MetricName: "Errors"
+      Dimensions:
+      - Name: "FunctionName"
+        Value: !Ref JiraBackupDownload
+      Statistic: "Sum"
+      ComparisonOperator: "GreaterThanThreshold"
+      Threshold: 0
+      EvaluationPeriods: 1
+      Period: 86400
+      TreatMissingData: "missing"
+
+  JiraBackupInitiateInvocationsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Join ["", [!Ref JiraBackupInitiate, "-", "Invocations" ]]
+      AlarmDescription: "JiraBackupInitiate Lambda Invocations Alarm"
+      AlarmActions:
+        - <YOUR-SNS-TOPIC-HERE>
+      OKActions:
+        - <YOUR-SNS-TOPIC-HERE>
+      Namespace: "AWS/Lambda"
+      MetricName: "Invocations"
+      Dimensions:
+      - Name: "FunctionName"
+        Value: !Ref JiraBackupInitiate
+      Statistic: "Sum"
+      ComparisonOperator: "LessThanThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 86400
+      TreatMissingData: "missing"
+
+  JiraBackupDownloadInvocationsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Join ["", [!Ref JiraBackupDownload, "-", "Invocations" ]]
+      AlarmDescription: "JiraBackupDownload Lambda Invocations Alarm"
+      AlarmActions:
+        - <YOUR-SNS-TOPIC-HERE>
+      OKActions:
+        - <YOUR-SNS-TOPIC-HERE>
+      Namespace: "AWS/Lambda"
+      MetricName: "Invocations"
+      Dimensions:
+      - Name: "FunctionName"
+        Value: !Ref JiraBackupDownload
+      Statistic: "Sum"
+      ComparisonOperator: "LessThanThreshold"
+      Threshold: 1
+      EvaluationPeriods: 1
+      Period: 86400
+      TreatMissingData: "missing"
+
+############# LAMBDA 1 #############
+############# This Lambda executes the Jira backup and sends the final backup file URL to the the jira-backup SQS queue so it gets picked up by the second lambda #############
+  JiraBackupInitiate:
+    DependsOn: JiraBackupQueue
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        "JiraBackupInitiate"
+      Handler: index.lambda_handler
+      Role: !GetAtt JiraBackupRole.Arn
+      Runtime: python3.7
+      TracingConfig:
+        Mode: Active
+      Timeout: 180
+      Layers: 
+        - !ImportValue RequestsLayer
+      Code:
+        ZipFile: !Sub | 
+          import json,time,os,requests,boto3,sys
+          from requests.auth import HTTPBasicAuth
+          sqs = boto3.client('sqs')
+          sqs_url = "${JiraBackupQueue}"
+          config = {
+              "JIRA_HOST": "<ACCOUNT>.atlassian.net",
+              "JIRA_EMAIL": "<ACCOUNT-EMAIL>",
+              "API_TOKEN": "<ACCOUNT TOKEN>",
+              "INCLUDE_ATTACHMENTS": "true"
+          }
+          auth = HTTPBasicAuth(config['JIRA_EMAIL'], config['API_TOKEN'])
+          URL_run_backup = 'https://{}/rest/backup/1/export/runbackup'.format(config['JIRA_HOST'])
+          def jira_backup():
+              print('-> Starting backup: {}'.format(config['INCLUDE_ATTACHMENTS']))
+              payload = {"cbAttachments": config['INCLUDE_ATTACHMENTS'], "exportToCloud": "true"}
+              headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+              backup = requests.post(URL_run_backup, data=json.dumps(payload), headers=headers, auth=auth)
+              if backup.status_code != 200:
+                  return('''{"Status": "%s", "Data": "%s" }''' % (backup.status_code,json.loads(backup.text)['error']))
+              if backup.status_code == 200:
+                  print(backup.text)
+                  task_id = json.loads(backup.text)['taskId']
+                  print("Backup started fine: task_id={task_id}")
+                  time.sleep(30)
+                  return('''{"Status": "%s", "Data": "%s" }''' % (backup.status_code,task_id))
+          def lambda_handler(event,context):
+              print(event)
+              jira = jira_backup()
+              print(jira)
+              status = json.loads(jira)['Status']
+              data = json.loads(jira)['Data']
+              if status == '200':
+                  print("backup initiated , task ID sent to SQS")
+                  print(sqs.send_message(QueueUrl=sqs_url, MessageBody=f"task_id={data}"))
+              else:
+                  print(f"Backup failed: {status} {data}")
+  JiraBackupInitiateLogGroup:
+    DependsOn: JiraBackupInitiate
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${JiraBackupInitiate}'
+      RetentionInDays: 7
+
+############# LAMBDA 2 #############
+############# This lambda picks up the URL from the jira-backup SQS queue and streams it to S3 #############
+
+  JiraBackupDownload:
+    DependsOn: JiraBackupQueue
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName:
+        "JiraBackupDownload"
+      Handler: index.lambda_handler
+      Role: !GetAtt JiraBackupRole.Arn
+      Runtime: python3.7
+      TracingConfig:
+        Mode: Active
+      Timeout: 900
+      Layers:
+        - !ImportValue RequestsLayer
+      Code:
+        ZipFile: !Sub |
+          import boto3,requests,time,json,sys
+          from requests.auth import HTTPBasicAuth
+          timestr = time.strftime("%Y%m%d-%H%M%S")
+          sqs = boto3.client('sqs')
+          sqs_url = "${JiraBackupQueue}"
+          s3 = boto3.client('s3')
+          timestr = time.strftime("%Y%m%d-%H%M%S")
+          config = {
+              "JIRA_HOST": "<ACCOUNT>.atlassian.net",
+              "JIRA_EMAIL": "<ACCOUNT-EMAIL>",
+              "API_TOKEN": "<ACCOUNT TOKEN>",
+              "UPLOAD_TO_S3": {
+                  "S3_BUCKET": "<BUCKET_NAME>"
+              }
+          }
+          def s3_stream(data, bucket, key):
+              stream = boto3.client("s3").upload_fileobj(data, Bucket=bucket, Key=key)
+              return(stream)
+          auth = HTTPBasicAuth(config['JIRA_EMAIL'], config['API_TOKEN'])
+          URL_download = 'https://{}/plugins/servlet'.format(config['JIRA_HOST'])
+          URL_backup_progress = 'https://{}/rest/backup/1/export/getProgress?taskId=<TASK_ID>'.format(config['JIRA_HOST'])
+          def lambda_handler(event,context):
+              print(event)
+              for body in event['Records']:
+                  if 'task_id=' in body['body']:
+                      task_id = body['body'].strip('task_id=')
+                      progress = URL_backup_progress.replace('<TASK_ID>', task_id)
+                      status = json.loads(requests.get(progress, auth=auth).text)
+                      if "Success" in status['status']:
+                          download_url = '{prefix}/{resultId}'.format(prefix=URL_download, resultId=status['result'])
+                          print(download_url)
+                          r = requests.get(download_url, stream=True, auth=HTTPBasicAuth(config['JIRA_EMAIL'], config['API_TOKEN']))
+                          bucket = config['UPLOAD_TO_S3']['S3_BUCKET']
+                          if r.status_code == 200:
+                              print("streaming to S3 now..")
+                              s3_filename = f"JIRA-Backup-{timestr}.zip"
+                              key = f"backups/{s3_filename}"
+                              print(s3_stream(r.raw, bucket, key))
+                              print(f"Backup file {s3_filename} uploaded to {config['UPLOAD_TO_S3']['S3_BUCKET']}")
+                          else:
+                              error = json.loads(r.text)['error']
+                              print(f"Streaming failed: {r.status_code} {error['code']}")
+                      else:
+                          print(f"Backup status: {status['status']}, sending task_id back to SQS to check status later ")
+                          print(sqs.send_message(QueueUrl=sqs_url, MessageBody=f"task_id={task_id}"))
+  JiraBackupDownloadEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 10
+      Enabled: true
+      EventSourceArn: !GetAtt JiraBackupQueue.Arn
+      FunctionName: !GetAtt JiraBackupDownload.Arn
+  JiraBackupDownloadLogGroup:
+    DependsOn: JiraBackupDownload
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${JiraBackupDownload}'
+      RetentionInDays: 7
+
