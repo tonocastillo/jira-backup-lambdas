@@ -60,7 +60,7 @@ Within the jira-backup.yml template
               }
           }
 ```
-You need to modify *"<LAYERS-BUCKET>"* within the lambda-layers.yml template to use the bucket you want to use for layers.
+You need to modify *LAYERS-BUCKET* within the lambda-layers.yml template to use the bucket you want to use for layers.
   
 
 
