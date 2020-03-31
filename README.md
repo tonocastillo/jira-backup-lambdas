@@ -30,37 +30,38 @@ We also created a couple of DNS records in Route53 (public and private in our ca
 ### Installation:
 
 
-Cloudformation template:
+Cloudformation templates:
 
 https://github.com/tonocastillo/jira-backup-lambdas
 
-You need to replace some entries within the the Cloudformation template according to what you have in your environment.
+You need to replace some entries within the the Cloudformation templates according to what you have/want in your environment.
 
 These are the ones:
 
+Within the jira-backup.yml template
+
+- JiraBackupInitiate:
 ```
-<INSERT_S3_BUCKET_HERE>
-<PRIVATE_HOSTED_ZONE_ID>
-<PUBLIC_HOSTED_ZONE_ID>
-<SNS_TOPIC_ARN>
-<ACCOUNT_ID>
-<AWS_REGION>
-<LambdaLayer-RequestsLayer_ARN>
+          config = {
               "JIRA_HOST": "<ACCOUNT>.atlassian.net",
-              "JIRA_EMAIL": "<ACCOUNT_EMAIL",
-              "API_TOKEN": "<INSERT_YOUR_API_TOKEN_HERE",
-              "INCLUDE_ATTACHMENTS": "true",
-              "UPLOAD_TO_S3": {
-                  "S3_BUCKET": "<INSERT_S3_BUCKET_HERE>"
+              "JIRA_EMAIL": "<ACCOUNT-EMAIL>",
+              "API_TOKEN": "<ACCOUNT TOKEN>",
+              "INCLUDE_ATTACHMENTS": "true"
+          }
 ```
-
-**Important**:
-
-You need to create a Layer in Lambda for the 'requests' python3 module.
-
-Once replaced, go to Cloudformation in the AWS console and create a stack with this template.
-
-Some resources were hardcoded in the template since having this solution in one region is enough but you can add some parameters to the template and make changes when creating a new stack in Cloudformation.
+- JiraBackupDownload
+```
+          config = {
+              "JIRA_HOST": "<ACCOUNT>.atlassian.net",
+              "JIRA_EMAIL": "<ACCOUNT-EMAIL>",
+              "API_TOKEN": "<ACCOUNT TOKEN>",
+              "UPLOAD_TO_S3": {
+                  "S3_BUCKET": "<BUCKET_NAME>"
+              }
+          }
+```
+You need to modify <LAYERS-BUCKET> within the lambda-layers.yml template to use the bucket you want to use for layers.
+  
 
 
 ### Resources:
