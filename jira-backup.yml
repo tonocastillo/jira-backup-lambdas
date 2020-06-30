@@ -3,6 +3,33 @@ AWSTemplateFormatVersion: '2010-09-09'
 
 Description: "Template to create the Jira backup lambda function"
 
+########## PARAMETERS ##########
+Parameters:
+
+
+  JiraBucketName:
+    Type: String
+    Description: Enter the Jira backup bucket name here.
+    Default: BUCKET_NAME
+  JiraSNS:
+    Type: String
+    Default: SNS_TOPIC_ARN
+    Description: SNS Topic needed for alarms notifications.
+  JiraAccountName:
+    Type: String
+    Description: Jira account name (<JiraAccountName>.atlassian.net)
+    Default: Jira Account-User-Name-Only     
+  JiraEmail:
+    Type: String
+    Description: Jira login email
+    Default: jira@email.here
+  JiraToken:
+    Type: String
+    NoEcho: true
+    Description: Jira API token (masked input for security)
+    Default: Enter the Jira API token here
+
+########## RESOURCES ##########
 
 Resources:
 ############# RULE LAMBDA 1 #############
@@ -55,15 +82,6 @@ Resources:
                     - iam:PassRole
                     - xray:PutTraceSegments
                     - sns:Publish
-                  Resource: "*"
-          -
-            PolicyName: "CloudFormationPermissions"
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                -
-                  Effect: Allow
-                  Action: cloudformation:*
                   Resource: "*"
           -
             PolicyName: "XRayPermissions"
@@ -145,8 +163,12 @@ Resources:
   JiraBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: <BUCKET_NAME>
+      BucketName: !Ref JiraBucketName
       AccessControl: BucketOwnerFullControl
+      WebsiteConfiguration:
+        RedirectAllRequestsTo:
+          HostName: !Join ["", [!Ref JiraAccountName, ".", "atlassian.net" ]]
+          Protocol: https
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -174,6 +196,7 @@ Resources:
       DelaySeconds: 300
       MessageRetentionPeriod: 360
 
+
 ############# ALARMS for Lambda  #############
 
   JiraBackupInitiateErrorsAlarm:
@@ -182,9 +205,9 @@ Resources:
       AlarmName: !Join ["", [!Ref JiraBackupInitiate, "-", "Errors" ]]
       AlarmDescription: "JiraBackupInitiate Lambda Errors Alarm"
       AlarmActions:
-        - <YOUR-SNS-TOPIC-HERE>
+        - !Ref JiraSNS
       OKActions:
-        - <YOUR-SNS-TOPIC-HERE>
+        - !Ref JiraSNS
       Namespace: "AWS/Lambda"
       MetricName: "Errors"
       Dimensions:
@@ -203,9 +226,9 @@ Resources:
       AlarmName: !Join ["", [!Ref JiraBackupDownload, "-", "Errors" ]]
       AlarmDescription: "JiraBackupDownload Lambda Errors Alarm"
       AlarmActions:
-        - <YOUR-SNS-TOPIC-HERE>
+        - !Ref JiraSNS
       OKActions:
-        - <YOUR-SNS-TOPIC-HERE>
+        - !Ref JiraSNS
       Namespace: "AWS/Lambda"
       MetricName: "Errors"
       Dimensions:
@@ -224,9 +247,9 @@ Resources:
       AlarmName: !Join ["", [!Ref JiraBackupInitiate, "-", "Invocations" ]]
       AlarmDescription: "JiraBackupInitiate Lambda Invocations Alarm"
       AlarmActions:
-        - <YOUR-SNS-TOPIC-HERE>
+        - !Ref JiraSNS
       OKActions:
-        - <YOUR-SNS-TOPIC-HERE>
+        - !Ref JiraSNS
       Namespace: "AWS/Lambda"
       MetricName: "Invocations"
       Dimensions:
@@ -245,9 +268,9 @@ Resources:
       AlarmName: !Join ["", [!Ref JiraBackupDownload, "-", "Invocations" ]]
       AlarmDescription: "JiraBackupDownload Lambda Invocations Alarm"
       AlarmActions:
-        - <YOUR-SNS-TOPIC-HERE>
+        - !Ref JiraSNS
       OKActions:
-        - <YOUR-SNS-TOPIC-HERE>
+        - !Ref JiraSNS
       Namespace: "AWS/Lambda"
       MetricName: "Invocations"
       Dimensions:
@@ -275,7 +298,7 @@ Resources:
         Mode: Active
       Timeout: 180
       Layers: 
-        - !ImportValue RequestsLayer
+        - Fn::ImportValue: LambdaLayer-RequestsLayer
       Code:
         ZipFile: !Sub | 
           import json,time,os,requests,boto3,sys
@@ -283,9 +306,9 @@ Resources:
           sqs = boto3.client('sqs')
           sqs_url = "${JiraBackupQueue}"
           config = {
-              "JIRA_HOST": "<ACCOUNT>.atlassian.net",
-              "JIRA_EMAIL": "<ACCOUNT-EMAIL>",
-              "API_TOKEN": "<ACCOUNT TOKEN>",
+              "JIRA_HOST": "${JiraAccountName}.atlassian.net",
+              "JIRA_EMAIL": "${JiraEmail}",
+              "API_TOKEN": "${JiraToken}",
               "INCLUDE_ATTACHMENTS": "true"
           }
           auth = HTTPBasicAuth(config['JIRA_EMAIL'], config['API_TOKEN'])
@@ -337,7 +360,7 @@ Resources:
         Mode: Active
       Timeout: 900
       Layers:
-        - !ImportValue RequestsLayer
+        - Fn::ImportValue: LambdaLayer-RequestsLayer
       Code:
         ZipFile: !Sub |
           import boto3,requests,time,json,sys
@@ -348,11 +371,11 @@ Resources:
           s3 = boto3.client('s3')
           timestr = time.strftime("%Y%m%d-%H%M%S")
           config = {
-              "JIRA_HOST": "<ACCOUNT>.atlassian.net",
-              "JIRA_EMAIL": "<ACCOUNT-EMAIL>",
-              "API_TOKEN": "<ACCOUNT TOKEN>",
+              "JIRA_HOST": "${JiraAccountName}.atlassian.net",
+              "JIRA_EMAIL": "${JiraEmail}",
+              "API_TOKEN": "${JiraToken}",
               "UPLOAD_TO_S3": {
-                  "S3_BUCKET": "<BUCKET_NAME>"
+                  "S3_BUCKET": "${JiraBucket}"
               }
           }
           def s3_stream(data, bucket, key):
@@ -398,4 +421,3 @@ Resources:
     Properties:
       LogGroupName: !Sub '/aws/lambda/${JiraBackupDownload}'
       RetentionInDays: 7
-
